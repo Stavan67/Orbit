@@ -1,0 +1,28 @@
+{
+  "properties": [
+    {
+      "name": "tle.update.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Enable automatic TLE data updates via scheduled task.",
+      "defaultValue": false
+    },
+    {
+      "name": "tle.update.cron",
+      "type": "java.lang.String",
+      "description": "Cron expression for TLE update schedule (default: every 6 hours).",
+      "defaultValue": "0 0 */6 * * *"
+    },
+    {
+      "name": "tle.critical.update.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Enable more frequent updates for critical satellites.",
+      "defaultValue": false
+    },
+    {
+      "name": "tle.critical.update.cron",
+      "type": "java.lang.String",
+      "description": "Cron expression for critical satellites update schedule (default: every 2 hours).",
+      "defaultValue": "0 0 */2 * * *"
+    }
+  ]
+}
