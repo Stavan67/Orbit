@@ -3,6 +3,7 @@ package com.orbit.scheduler;
 import com.orbit.service.SpaceTrackService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -16,6 +17,9 @@ import java.time.LocalDateTime;
 public class TleUpdateScheduler {
 
     private final SpaceTrackService spaceTrackService;
+
+    @Value("${tle.critical.update.enabled:false}")
+    private boolean criticalUpdateEnabled;
 
     @Scheduled(initialDelay = 60000, fixedDelay = Long.MAX_VALUE)
     public void fetchOnStartup() {
@@ -42,8 +46,11 @@ public class TleUpdateScheduler {
     }
 
     @Scheduled(cron = "${tle.critical.update.cron:0 0 */2 * * *}")
-    @ConditionalOnProperty(name = "tle.critical.update.enabled", havingValue = "true")
     public void scheduledCriticalSatellitesUpdate() {
+        if (!criticalUpdateEnabled) {
+            return;
+        }
+
         log.info("Starting critical satellites TLE update at {}", LocalDateTime.now());
 
         try {

@@ -3,26 +3,66 @@
     {
       "name": "tle.update.enabled",
       "type": "java.lang.Boolean",
-      "description": "Enable automatic TLE data updates via scheduled task.",
-      "defaultValue": false
+      "description": "Enable or disable TLE updates from Space-Track.",
+      "defaultValue": true
     },
     {
       "name": "tle.update.cron",
       "type": "java.lang.String",
-      "description": "Cron expression for TLE update schedule (default: every 6 hours).",
+      "description": "Cron expression for scheduled TLE updates.",
       "defaultValue": "0 0 */6 * * *"
     },
     {
       "name": "tle.critical.update.enabled",
       "type": "java.lang.Boolean",
-      "description": "Enable more frequent updates for critical satellites.",
+      "description": "Enable or disable critical satellite TLE updates.",
       "defaultValue": false
     },
     {
       "name": "tle.critical.update.cron",
       "type": "java.lang.String",
-      "description": "Cron expression for critical satellites update schedule (default: every 2 hours).",
+      "description": "Cron expression for critical satellite TLE updates.",
       "defaultValue": "0 0 */2 * * *"
+    },
+    {
+      "name": "collision.detection.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Enable or disable collision detection scheduling.",
+      "defaultValue": true
+    },
+    {
+      "name": "collision.detection.cron",
+      "type": "java.lang.String",
+      "description": "Cron expression for scheduled collision detection.",
+      "defaultValue": "0 0 * * * *"
+    },
+    {
+      "name": "collision.detection.priority.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Enable or disable priority collision detection (more frequent checks).",
+      "defaultValue": false
+    },
+    {
+      "name": "collision.detection.priority.cron",
+      "type": "java.lang.String",
+      "description": "Cron expression for priority collision detection.",
+      "defaultValue": "0 */15 * * * *"
+    },
+    {
+      "name": "spacetrack.username",
+      "type": "java.lang.String",
+      "description": "Space-Track API username."
+    },
+    {
+      "name": "spacetrack.password",
+      "type": "java.lang.String",
+      "description": "Space-Track API password."
+    },
+    {
+      "name": "spacetrack.base-url",
+      "type": "java.lang.String",
+      "description": "Space-Track API base URL.",
+      "defaultValue": "https://www.space-track.org"
     }
   ]
 }
