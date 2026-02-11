@@ -25,44 +25,38 @@
       "defaultValue": "0 0 */2 * * *"
     },
     {
-      "name": "collision.detection.enabled",
-      "type": "java.lang.Boolean",
-      "description": "Enable or disable collision detection scheduling.",
-      "defaultValue": true
-    },
-    {
-      "name": "collision.detection.cron",
-      "type": "java.lang.String",
-      "description": "Cron expression for scheduled collision detection.",
-      "defaultValue": "0 0 * * * *"
-    },
-    {
-      "name": "collision.detection.priority.enabled",
-      "type": "java.lang.Boolean",
-      "description": "Enable or disable priority collision detection (more frequent checks).",
-      "defaultValue": false
-    },
-    {
-      "name": "collision.detection.priority.cron",
-      "type": "java.lang.String",
-      "description": "Cron expression for priority collision detection.",
-      "defaultValue": "0 */15 * * * *"
+      "name": "tle.max-age-days",
+      "type": "java.lang.Integer",
+      "description": "Maximum TLE age in days for quality monitoring.",
+      "defaultValue": 7
     },
     {
       "name": "spacetrack.username",
       "type": "java.lang.String",
-      "description": "Space-Track API username."
+      "description": "Space-Track API username for authentication."
     },
     {
       "name": "spacetrack.password",
       "type": "java.lang.String",
-      "description": "Space-Track API password."
+      "description": "Space-Track API password for authentication."
     },
     {
       "name": "spacetrack.base-url",
       "type": "java.lang.String",
       "description": "Space-Track API base URL.",
       "defaultValue": "https://www.space-track.org"
+    },
+    {
+      "name": "spacetrack.timeout.connect",
+      "type": "java.lang.Integer",
+      "description": "HTTP connection timeout for Space-Track API (seconds).",
+      "defaultValue": 30
+    },
+    {
+      "name": "spacetrack.timeout.read",
+      "type": "java.lang.Integer",
+      "description": "HTTP read timeout for Space-Track API (seconds).",
+      "defaultValue": 60
     }
   ]
 }

@@ -18,11 +18,8 @@ public class TleData {
     @Column(name = "tle_id")
     private Long tleId;
 
-    @Column(name = "satellite_id", nullable = false)
-    private Long satelliteId;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "satellite_id", insertable = false, updatable = false)
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "satellite_id", nullable = false, unique = true)
     private Satellite satellite;
 
     @Column(name = "line1", nullable = false, length = 69)
@@ -58,17 +55,20 @@ public class TleData {
     @Column(name = "element_set_number")
     private Integer elementSetNumber;
 
-    @Column(name = "is_current")
-    private Boolean isCurrent;
-
     @Column(name = "created_at")
     private LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
-        if(isCurrent == null){
-            isCurrent = true;
-        }
+        updatedAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
     }
 }

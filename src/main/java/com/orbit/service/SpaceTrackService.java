@@ -12,7 +12,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
-
 import java.io.IOException;
 import java.net.URI;
 import java.net.URLEncoder;
@@ -22,10 +21,7 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -38,6 +34,7 @@ public class SpaceTrackService {
     private final TleDataRepository tleDataRepository;
     private String authCookie;
     private final ObjectMapper objectMapper = new ObjectMapper();
+
     private void authenticate() throws IOException, InterruptedException {
         String loginUrl = config.getBaseUrl() + "/ajaxauth/login";
         String credentials = String.format("identity=%s&password=%s",
@@ -54,7 +51,7 @@ public class SpaceTrackService {
 
         if(response.statusCode() == 200) {
             authCookie = response.headers().firstValue("Set-Cookie").orElse("");
-            log.info("Successfully authenticated SpaceTrack at {}", authCookie);
+            log.info("Successfully authenticated with Space-Track");
         } else{
             throw new RuntimeException("Authentication failed: " + response.statusCode());
         }
@@ -120,9 +117,18 @@ public class SpaceTrackService {
     private void saveTleDataInBatch(List<SpaceTrackTleDto> dtoList) {
         log.info("Processing {} records in optimized batch mode...", dtoList.size());
 
-        Set<Integer> noradIds = dtoList.stream()
-                .map(SpaceTrackTleDto::getNoradCatId)
-                .collect(Collectors.toSet());
+        Map<Integer, SpaceTrackTleDto> latestTleByNorad = dtoList.stream()
+                .collect(Collectors.groupingBy(
+                        SpaceTrackTleDto::getNoradCatId,
+                        Collectors.collectingAndThen(
+                                Collectors.maxBy(Comparator.comparing(SpaceTrackTleDto::getEpoch)),
+                                opt -> opt.orElse(null)
+                        )
+                ));
+
+        log.info("Filtered to {} unique satellites with latest TLE data", latestTleByNorad.size());
+
+        Set<Integer> noradIds = latestTleByNorad.keySet();
 
         List<Satellite> existingSatellites = satelliteRepository.findAllByNoradIdIn(noradIds);
         Map<Integer, Satellite> satelliteMap = existingSatellites.stream()
@@ -131,8 +137,9 @@ public class SpaceTrackService {
         log.info("Found {} existing satellites in database", existingSatellites.size());
 
         List<Satellite> newSatellites = new ArrayList<>();
-        for (SpaceTrackTleDto dto : dtoList) {
-            if (!satelliteMap.containsKey(dto.getNoradCatId())) {
+        for (Integer noradId : noradIds) {
+            if (!satelliteMap.containsKey(noradId)) {
+                SpaceTrackTleDto dto = latestTleByNorad.get(noradId);
                 Satellite newSat = createSatelliteFromDto(dto);
                 newSatellites.add(newSat);
             }
@@ -144,37 +151,44 @@ public class SpaceTrackService {
             savedNewSats.forEach(s -> satelliteMap.put(s.getNoradId(), s));
         }
 
-        Set<Long> satelliteIds = satelliteMap.values().stream()
-                .map(Satellite::getSatelliteId)
-                .collect(Collectors.toSet());
+        Set<Satellite> satellites = new HashSet<>(satelliteMap.values());
 
-        List<TleData> existingTles = tleDataRepository.findAllBySatelliteIdIn(satelliteIds);
+        List<TleData> existingTles = tleDataRepository.findAllBySatelliteIn(satellites);
+        Map<Long, TleData> existingTleMap = existingTles.stream()
+                .collect(Collectors.toMap(tle -> tle.getSatellite().getSatelliteId(), t -> t, (t1, t2) -> t1));
 
-        if (!existingTles.isEmpty()) {
-            log.info("Marking {} existing TLE records as not current...", existingTles.size());
-            existingTles.forEach(tle -> tle.setIsCurrent(false));
-            tleDataRepository.saveAll(existingTles);
-        }
+        log.info("Found {} existing TLE records in database", existingTles.size());
 
-        List<TleData> newTleList = new ArrayList<>();
-        int count = 0;
-        for (SpaceTrackTleDto dto : dtoList) {
-            Satellite satellite = satelliteMap.get(dto.getNoradCatId());
+        List<TleData> tlesToSave = new ArrayList<>();
+        int updatedCount = 0;
+        int createdCount = 0;
+
+        for (Map.Entry<Integer, SpaceTrackTleDto> entry : latestTleByNorad.entrySet()) {
+            Satellite satellite = satelliteMap.get(entry.getKey());
             if (satellite != null) {
-                TleData tleData = createTleDataFromDto(dto, satellite.getSatelliteId());
-                newTleList.add(tleData);
-                count++;
+                TleData existingTle = existingTleMap.get(satellite.getSatelliteId());
 
-                if (count % 5000 == 0) {
-                    log.info("Prepared {}/{} TLE records...", count, dtoList.size());
+                if (existingTle != null) {
+                    updateTleDataFromDto(existingTle, entry.getValue());
+                    tlesToSave.add(existingTle);
+                    updatedCount++;
+                } else {
+                    TleData newTle = createTleDataFromDto(entry.getValue(), satellite);
+                    tlesToSave.add(newTle);
+                    createdCount++;
+                }
+
+                if (tlesToSave.size() % 1000 == 0) {
+                    log.info("Prepared {}/{} TLE records...", tlesToSave.size(), latestTleByNorad.size());
                 }
             }
         }
 
-        log.info("Inserting {} TLE records in batch...", newTleList.size());
-        tleDataRepository.saveAll(newTleList);
+        log.info("Saving {} TLE records ({} updates, {} new)...", tlesToSave.size(), updatedCount, createdCount);
+        tleDataRepository.saveAll(tlesToSave);
 
-        log.info("Successfully saved {} TLE records to database", newTleList.size());
+        log.info("Successfully saved {} TLE records to database ({} updated, {} created)",
+                tlesToSave.size(), updatedCount, createdCount);
     }
 
     private Satellite createSatelliteFromDto(SpaceTrackTleDto dto) {
@@ -188,12 +202,21 @@ public class SpaceTrackService {
         return satellite;
     }
 
-    private TleData createTleDataFromDto(SpaceTrackTleDto dto, Long satelliteId) {
+    private TleData createTleDataFromDto(SpaceTrackTleDto dto, Satellite satellite) {
+        TleData tleData = new TleData();
+        tleData.setSatellite(satellite);
+        populateTleFields(tleData, dto);
+        return tleData;
+    }
+
+    private void updateTleDataFromDto(TleData existingTle, SpaceTrackTleDto dto) {
+        populateTleFields(existingTle, dto);
+    }
+
+    private void populateTleFields(TleData tleData, SpaceTrackTleDto dto) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSSSS");
         LocalDateTime epochDate = LocalDateTime.parse(dto.getEpoch(), formatter);
 
-        TleData tleData = new TleData();
-        tleData.setSatelliteId(satelliteId);
         tleData.setLine1(dto.getTleLine1());
         tleData.setLine2(dto.getTleLine2());
         tleData.setEpoch(epochDate);
@@ -205,8 +228,5 @@ public class SpaceTrackService {
         tleData.setMeanAnomaly(dto.getMeanAnomaly());
         tleData.setClassification(dto.getClassificationType());
         tleData.setElementSetNumber(dto.getElementSetNo());
-        tleData.setIsCurrent(true);
-
-        return tleData;
     }
 }
