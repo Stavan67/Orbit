@@ -7,18 +7,13 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ConjunctionEventRepository extends JpaRepository<ConjunctionEvent, Long> {
-
-    List<ConjunctionEvent> findByPrimarySatelliteAndTcaAfter(
-            Satellite primarySatellite,
-            LocalDateTime afterTime
-    );
-
+    Optional<ConjunctionEvent> findByDedupKey(String dedupKey);
     @Query("SELECT ce FROM ConjunctionEvent ce " +
             "WHERE ce.primarySatellite = :primary " +
             "AND ce.tca BETWEEN :startTime AND :endTime " +
@@ -40,16 +35,28 @@ public interface ConjunctionEventRepository extends JpaRepository<ConjunctionEve
             @Param("now") LocalDateTime now
     );
 
+    @Query("SELECT ce FROM ConjunctionEvent ce " +
+            "WHERE ce.primarySatellite = :primary " +
+            "AND ce.probabilityOfCollision >= :minPc " +
+            "AND ce.tca > :now " +
+            "ORDER BY ce.probabilityOfCollision DESC")
+    List<ConjunctionEvent> findByPrimaryAndMinPc(
+            @Param("primary") Satellite primary,
+            @Param("minPc") Double minPc,
+            @Param("now") LocalDateTime now
+    );
+
+    @Query("SELECT ce FROM ConjunctionEvent ce " +
+            "WHERE ce.primarySatellite = :primary " +
+            "AND ce.cdmBased = true " +
+            "AND ce.tca > :now " +
+            "ORDER BY ce.tca ASC")
+    List<ConjunctionEvent> findCdmBackedEvents(
+            @Param("primary") Satellite primary,
+            @Param("now") LocalDateTime now
+    );
+
     @Modifying
     @Query("DELETE FROM ConjunctionEvent ce WHERE ce.tca < :cutoffDate")
     void deleteOldEvents(@Param("cutoffDate") LocalDateTime cutoffDate);
-
-    @Query("SELECT COUNT(ce) FROM ConjunctionEvent ce " +
-            "WHERE ce.primarySatellite = :primary " +
-            "AND ce.tca BETWEEN :start AND :end")
-    long countEventsByPrimaryInWindow(
-            @Param("primary") Satellite primary,
-            @Param("start") LocalDateTime start,
-            @Param("end") LocalDateTime end
-    );
 }

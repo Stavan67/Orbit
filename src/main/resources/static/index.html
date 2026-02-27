@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>ORBIT — Conjunction Monitor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet"/>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg:     #0a0a0a;
+            --bg2:    #111111;
+            --bg3:    #1a1a1a;
+            --b1:     #222222;
+            --b2:     #333333;
+            --text:   #e8e8e8;
+            --dim:    #888888;
+            --faint:  #444444;
+            --amber:  #f5a623;
+            --amber2: #7a4d08;
+            --red:    #e05252;
+            --red2:   #6b1f1f;
+            --yellow: #d4b84a;
+            --green:  #52a068;
+            --mono:   'IBM Plex Mono', monospace;
+        }
+
+        html, body { min-height: 100%; background: var(--bg); color: var(--text); font-family: var(--mono); font-size: 13px; line-height: 1.6; }
+
+        @keyframes fadeUp  { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes spin    { to { transform: rotate(360deg); } }
+        @keyframes blink   { 0%,100%{opacity:1} 50%{opacity:0.25} }
+
+        .e0 { animation: fadeUp 0.35s ease both; }
+        .e1 { animation: fadeUp 0.35s 0.08s ease both; }
+        .e2 { animation: fadeUp 0.35s 0.16s ease both; }
+        .e3 { animation: fadeUp 0.35s 0.24s ease both; }
+        .e4 { animation: fadeUp 0.35s 0.32s ease both; }
+
+        .page { max-width: 1120px; margin: 0 auto; padding: 0 24px 56px; }
+
+        /* topbar */
+        .bar {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 16px 0; border-bottom: 1px solid var(--b1);
+            margin-bottom: 32px; position: sticky; top: 0; background: var(--bg); z-index: 10;
+        }
+        .bar-left { display: flex; align-items: center; gap: 14px; }
+        .logo {
+            width: 30px; height: 30px; border: 1px solid var(--amber);
+            display: flex; align-items: center; justify-content: center; position: relative;
+        }
+        .logo::after {
+            content: ''; position: absolute; inset: 5px; border-radius: 50%;
+            border: 1px solid rgba(245,166,35,0.5);
+            animation: spin 14s linear infinite;
+        }
+        .logo-dot { width: 6px; height: 6px; background: var(--amber); border-radius: 50%; }
+        .wm { font-size: 11px; font-weight: 600; letter-spacing: 5px; }
+        .wm-sub { font-size: 9px; letter-spacing: 3px; color: var(--dim); margin-top: 1px; }
+        .bar-right { display: flex; gap: 24px; font-size: 10px; color: var(--dim); letter-spacing: 1px; align-items: center; }
+        .live { color: var(--green); display: flex; align-items: center; gap: 6px; }
+        .live-dot { width: 5px; height: 5px; background: var(--green); border-radius: 50%; animation: blink 2.5s ease-in-out infinite; }
+
+        /* sat header */
+        .sat-hdr {
+            display: flex; justify-content: space-between; align-items: flex-end;
+            padding-bottom: 20px; border-bottom: 1px solid var(--b1); margin-bottom: 24px;
+        }
+        .sat-id { font-size: 40px; font-weight: 600; letter-spacing: -1px; line-height: 1; }
+        .sat-nm { font-size: 10px; color: var(--dim); letter-spacing: 3px; text-transform: uppercase; margin-top: 6px; }
+        .meta-row { display: flex; gap: 28px; }
+        .mi { text-align: right; }
+        .mi-lbl { font-size: 9px; letter-spacing: 2px; color: var(--dim); text-transform: uppercase; }
+        .mi-val { font-size: 12px; color: var(--text); margin-top: 3px; }
+
+        /* counts */
+        .counts { display: flex; gap: 1px; margin-bottom: 32px; }
+        .cnt {
+            flex: 1; padding: 14px 16px; background: var(--bg2);
+            border: 1px solid var(--b1); border-right: none;
+        }
+        .counts .cnt:last-child { border-right: 1px solid var(--b1); }
+        .cnt.c { border-top: 2px solid var(--red); }
+        .cnt.h { border-top: 2px solid var(--amber); }
+        .cnt.m { border-top: 2px solid var(--yellow); }
+        .cnt.t { border-top: 2px solid var(--b2); }
+        .cnt-n { font-size: 28px; font-weight: 600; line-height: 1; }
+        .cnt.c .cnt-n { color: var(--red); }
+        .cnt.h .cnt-n { color: var(--amber); }
+        .cnt.m .cnt-n { color: var(--yellow); }
+        .cnt.t .cnt-n { color: var(--faint); }
+        .cnt-l { font-size: 9px; letter-spacing: 2px; color: var(--dim); margin-top: 5px; text-transform: uppercase; }
+
+        /* section divider */
+        .sec {
+            font-size: 9px; letter-spacing: 4px; text-transform: uppercase; color: var(--dim);
+            display: flex; align-items: center; gap: 12px; margin-bottom: 12px;
+        }
+        .sec::after { content: ''; flex: 1; height: 1px; background: var(--b1); }
+        .sec.sc { color: var(--red); }
+        .sec.sh { color: var(--amber); }
+        .sec.sm { color: var(--yellow); }
+
+        /* primary card */
+        .pc {
+            background: var(--bg2); border: 1px solid var(--red2);
+            margin-bottom: 28px; position: relative; overflow: hidden;
+        }
+        .pc::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+            background: linear-gradient(90deg, var(--red), transparent 70%);
+        }
+        .pc-inner { display: grid; grid-template-columns: 1fr 160px; }
+        .pc-body { padding: 22px 26px; }
+        .pc-flag {
+            font-size: 8px; letter-spacing: 3px; font-weight: 600; color: var(--red);
+            border: 1px solid var(--red2); padding: 3px 8px; display: inline-block;
+            background: rgba(224,82,82,0.05); margin-bottom: 14px;
+        }
+        .pc-pair { font-size: 20px; font-weight: 600; margin-bottom: 4px; line-height: 1.2; }
+        .pc-names { font-size: 11px; color: var(--dim); margin-bottom: 20px; }
+        .pc-metrics { display: grid; grid-template-columns: repeat(4,1fr); gap: 18px; }
+        .ml { font-size: 8px; letter-spacing: 2px; color: var(--dim); text-transform: uppercase; margin-bottom: 4px; }
+        .mv { font-size: 19px; font-weight: 500; line-height: 1; }
+        .mv.dr { color: var(--red); }
+        .mv.am { color: var(--amber); }
+        .mu { font-size: 10px; color: var(--dim); margin-left: 2px; }
+
+        .pc-side {
+            padding: 22px 18px; border-left: 1px solid var(--b1);
+            display: flex; flex-direction: column; gap: 18px; justify-content: center;
+        }
+        .sl { font-size: 8px; letter-spacing: 2px; color: var(--dim); text-transform: uppercase; margin-bottom: 4px; }
+        .sd { font-size: 11px; color: var(--dim); }
+        .st { font-size: 13px; font-weight: 500; margin-top: 2px; }
+        .sc2 { font-size: 13px; color: var(--amber); font-weight: 500; margin-top: 6px; }
+
+        /* source badge */
+        .sb { font-size: 8px; letter-spacing: 1.5px; padding: 3px 7px; border: 1px solid; display: inline-block; }
+        .sb.tle  { border-color: #1d4a2a; color: var(--green); }
+        .sb.cdm  { border-color: #163040; color: #5bbbd4; }
+        .sb.cdo  { border-color: var(--amber2); color: var(--amber); }
+
+        /* table */
+        .tbl { width: 100%; border-collapse: collapse; margin-bottom: 28px; }
+        .tbl th { font-size: 8px; letter-spacing: 2px; text-transform: uppercase; color: var(--dim); font-weight: 400; padding: 8px 10px; border-bottom: 1px solid var(--b1); text-align: left; white-space: nowrap; }
+        .tbl td { padding: 11px 10px; border-bottom: 1px solid var(--b1); vertical-align: middle; }
+        .tbl tr:last-child td { border-bottom: none; }
+        .tbl tr { background: var(--bg2); transition: background 0.1s; }
+        .tbl tr:hover { background: var(--bg3); }
+        .nc.sc { color: var(--red); } .nc.sh { color: var(--amber); } .nc.sm { color: var(--yellow); }
+        .nc { font-weight: 600; }
+        .dc { color: var(--dim); font-size: 11px; }
+        .vr { color: var(--red); } .va { color: var(--amber); }
+        .pill { font-size: 8px; letter-spacing: 1.5px; padding: 2px 7px; border: 1px solid; display: inline-block; }
+        .pill.sc { border-color: var(--red2); color: var(--red); }
+        .pill.sh { border-color: var(--amber2); color: var(--amber); }
+        .pill.sm { border-color: #4a3a10; color: var(--yellow); }
+
+        /* states */
+        .ctr { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 50vh; gap: 16px; }
+        .sp { width: 26px; height: 26px; border: 1px solid var(--b2); border-top-color: var(--amber); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        .ct { font-size: 10px; color: var(--dim); letter-spacing: 2px; }
+        .eb { padding: 22px 28px; border: 1px solid var(--red2); max-width: 460px; text-align: center; }
+        .et { font-size: 11px; color: var(--red); letter-spacing: 3px; margin-bottom: 8px; }
+        .em { font-size: 11px; color: var(--dim); line-height: 1.9; }
+        .rb { margin-top: 14px; padding: 8px 18px; background: transparent; border: 1px solid var(--b2); color: var(--dim); cursor: pointer; font-family: var(--mono); font-size: 10px; letter-spacing: 2px; transition: border-color 0.2s, color 0.2s; }
+        .rb:hover { border-color: var(--amber); color: var(--amber); }
+        .en { padding: 28px 20px; border: 1px dashed var(--b1); color: var(--dim); font-size: 11px; text-align: center; line-height: 2.2; }
+
+        /* footer */
+        .ft { border-top: 1px solid var(--b1); padding: 14px 0; display: flex; justify-content: space-between; font-size: 10px; color: var(--dim); letter-spacing: 1px; margin-top: 16px; }
+
+        @media (max-width: 760px) {
+            .pc-inner { grid-template-columns: 1fr; }
+            .pc-side { border-left: none; border-top: 1px solid var(--b1); flex-direction: row; flex-wrap: wrap; gap: 16px; }
+            .pc-metrics { grid-template-columns: repeat(2,1fr); }
+            .sat-hdr { flex-direction: column; align-items: flex-start; gap: 14px; }
+            .meta-row { flex-wrap: wrap; gap: 14px; }
+            .mi { text-align: left; }
+            .bar-right { display: none; }
+            .tbl th:nth-child(5), .tbl td:nth-child(5),
+            .tbl th:nth-child(7), .tbl td:nth-child(7) { display: none; }
+        }
+    </style>
+</head>
+<body>
+<div class="page" id="root"></div>
+
+<script type="text/babel">
+    const { useState, useEffect } = React;
+    const NORAD = 16181;
+
+    const tca = s => {
+        if (!s) return { d:'—', t:'—' };
+        const dt = new Date(s.includes('Z') ? s : s+'Z');
+        return {
+            d: dt.toLocaleDateString('en-US',{month:'short',day:'2-digit',year:'numeric',timeZone:'UTC'}),
+            t: dt.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',timeZone:'UTC',hour12:false})+' UTC'
+        };
+    };
+
+    const hrs = h => { if(h==null) return '—'; if(h<0) return 'ELAPSED'; if(h<1) return Math.round(h*60)+'m'; if(h<24) return h.toFixed(1)+'h'; return (h/24).toFixed(1)+'d'; };
+    const pc  = (v,d) => (!v||v===0)?'~0':(d||v.toExponential(3));
+    const miss = m => m==null?'—':m<1000?Math.round(m)+' m':(m/1000).toFixed(2)+' km';
+    const vel  = v => v==null?'—':(v/1000).toFixed(2)+' km/s';
+
+    function Src({s,c}){
+        if(s==='CDM_ONLY') return <span className="sb cdo">CDM ONLY</span>;
+        if(c) return <span className="sb cdm">CDM CONFIRMED</span>;
+        return <span className="sb tle">TLE SCREENED</span>;
+    }
+
+    function Primary({ev}){
+        const t=tca(ev.tca), r=ev.riskLevel.toLowerCase();
+        return <div className="pc e2">
+            <div className="pc-inner">
+                <div className="pc-body">
+                    <div className="pc-flag">HIGHEST COLLISION RISK</div>
+                    <div className="pc-pair">{NORAD} &nbsp;↔&nbsp; {ev.secondaryNorad}</div>
+                    <div className="pc-names">COSMOS 1697 &nbsp;/&nbsp; {ev.secondaryName}</div>
+                    <div className="pc-metrics">
+                        <div><div className="ml">Miss Distance</div><div className="mv dr">{ev.missDistanceM!=null?Math.round(ev.missDistanceM):'—'}<span className="mu">m</span></div></div>
+                        <div><div className="ml">Collision Pc</div><div className="mv dr">{pc(ev.probabilityOfCollision,ev.pcDisplay)}</div></div>
+                        <div><div className="ml">Rel. Velocity</div><div className="mv am">{ev.relativeVelocityMs!=null?(ev.relativeVelocityMs/1000).toFixed(2):'—'}<span className="mu">km/s</span></div></div>
+                        <div><div className="ml">Time to TCA</div><div className="mv am">{hrs(ev.hoursToTca)}</div></div>
+                    </div>
+                </div>
+                <div className="pc-side">
+                    <div>
+                        <div className="sl">Time of Closest Approach</div>
+                        <div className="sd">{t.d}</div>
+                        <div className="st">{t.t}</div>
+                        <div className="sc2">{hrs(ev.hoursToTca)}</div>
+                    </div>
+                    <div><div className="sl">Detection</div><Src s={ev.detectionSource} c={ev.cdmBased}/></div>
+                </div>
+            </div>
+        </div>;
+    }
+
+    function Table({evs}){
+        if(!evs||!evs.length) return null;
+        return <table className="tbl">
+            <thead><tr>
+                <th>NORAD</th><th>NAME</th><th>MISS DIST</th><th>COLLISION Pc</th>
+                <th>REL. VEL</th><th>TCA</th><th>T−TCA</th><th>RISK</th><th>SRC</th>
+            </tr></thead>
+            <tbody>{evs.map(ev=>{
+                const r=ev.riskLevel.toLowerCase(), t=tca(ev.tca);
+                const pcv=ev.probabilityOfCollision||0;
+                const mc=ev.missDistanceM<1000?'vr':ev.missDistanceM<5000?'va':'';
+                const pcc=pcv>=1e-4?'vr':pcv>=1e-6?'va':'';
+                return <tr key={ev.eventId}>
+                    <td className={`nc s${r[0]}`}>{ev.secondaryNorad}</td>
+                    <td className="dc">{ev.secondaryName}</td>
+                    <td className={mc}>{miss(ev.missDistanceM)}</td>
+                    <td className={pcc}>{pc(ev.probabilityOfCollision,ev.pcDisplay)}</td>
+                    <td>{vel(ev.relativeVelocityMs)}</td>
+                    <td className="dc">{t.d} {t.t}</td>
+                    <td>{hrs(ev.hoursToTca)}</td>
+                    <td><span className={`pill s${r[0]}`}>{ev.riskLevel}</span></td>
+                    <td><Src s={ev.detectionSource} c={ev.cdmBased}/></td>
+                </tr>;
+            })}</tbody>
+        </table>;
+    }
+
+    function App(){
+        const [data,setData]=useState(null);
+        const [loading,setLoading]=useState(true);
+        const [error,setError]=useState(null);
+        const [ts,setTs]=useState('');
+
+        const load=()=>{
+            setLoading(true);setError(null);
+            fetch(`/api/conjunction/dashboard/${NORAD}`)
+                .then(r=>{if(!r.ok)throw new Error(`HTTP ${r.status}`);return r.json();})
+                .then(d=>{setData(d);setTs(new Date().toUTCString().replace(' GMT',' UTC'));setLoading(false);})
+                .catch(e=>{setError(e.message);setLoading(false);});
+        };
+        useEffect(load,[]);
+
+        const all=data?[...(data.events?.critical||[]),...(data.events?.high||[]),...(data.events?.medium||[])]:[];
+        const sorted=[...all].sort((a,b)=>(a.missDistanceM||Infinity)-(b.missDistanceM||Infinity));
+        const pri=sorted[0]||null;
+        const oc=(data?.events?.critical||[]).filter(e=>e!==pri);
+        const hi=data?.events?.high||[];
+        const me=data?.events?.medium||[];
+
+        return <>
+            <div className="bar e0">
+                <div className="bar-left">
+                    <div className="logo"><div className="logo-dot"/></div>
+                    <div><div className="wm">ORBIT</div><div className="wm-sub">CONJUNCTION MONITOR</div></div>
+                </div>
+                <div className="bar-right">
+                    {ts&&<span>{ts}</span>}
+                    <span className="live"><span className="live-dot"/>LIVE</span>
+                </div>
+            </div>
+
+            {loading&&<div className="ctr"><div className="sp"/><div className="ct">LOADING...</div></div>}
+
+            {error&&<div className="ctr"><div className="eb">
+                <div className="et">CONNECTION ERROR</div>
+                <div className="em">Could not reach API: {error}<br/>Ensure Spring Boot is running.<br/>Run analysis first: POST /api/conjunction/analyze/{NORAD}</div>
+                <button className="rb" onClick={load}>RETRY</button>
+            </div></div>}
+
+            {!loading&&!error&&data&&<>
+                <div className="sat-hdr e1">
+                    <div>
+                        <div className="sat-id">{data.primaryNorad}</div>
+                        <div className="sat-nm">{data.primaryName||'COSMOS 1697'}</div>
+                    </div>
+                    <div className="meta-row">
+                        <div className="mi"><div className="mi-lbl">Analysis Epoch</div><div className="mi-val">{data.generatedAt?new Date(data.generatedAt+'Z').toUTCString().replace(' GMT',''):'—'}</div></div>
+                        <div className="mi"><div className="mi-lbl">Screening Window</div><div className="mi-val">7-DAY FORWARD</div></div>
+                        <div className="mi"><div className="mi-lbl">Objects Screened</div><div className="mi-val">30,000+</div></div>
+                    </div>
+                </div>
+
+                <div className="counts e1">
+                    <div className="cnt c"><div className="cnt-n">{data.counts?.critical??0}</div><div className="cnt-l">CRITICAL</div></div>
+                    <div className="cnt h"><div className="cnt-n">{data.counts?.high??0}</div><div className="cnt-l">HIGH</div></div>
+                    <div className="cnt m"><div className="cnt-n">{data.counts?.medium??0}</div><div className="cnt-l">MEDIUM</div></div>
+                    <div className="cnt t"><div className="cnt-n">{data.counts?.total??0}</div><div className="cnt-l">TOTAL</div></div>
+                </div>
+
+                {all.length===0&&<div className="en e2">
+                    No conjunction events in database.<br/>
+                    Analysis runs daily at 02:00 UTC — or trigger manually:<br/>
+                    <strong>POST /api/conjunction/analyze/{NORAD}</strong>
+                </div>}
+
+                {pri&&<><div className="sec sc e2">PRIMARY THREAT</div><Primary ev={pri}/></>}
+                {oc.length>0&&<><div className="sec sc e3">CRITICAL — ADDITIONAL</div><Table evs={oc}/></>}
+                {hi.length>0&&<><div className="sec sh e3">HIGH RISK</div><Table evs={hi}/></>}
+                {me.length>0&&<><div className="sec sm e4">MEDIUM RISK</div><Table evs={me}/></>}
+            </>}
+
+            <div className="ft">
+                <span>SGP4 / OREKIT · FOSTER 2D Pc · PUBLIC TLE CATALOG</span>
+                <span>DATA: SPACE-TRACK.ORG</span>
+            </div>
+        </>;
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

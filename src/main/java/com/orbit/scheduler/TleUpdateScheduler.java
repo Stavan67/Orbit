@@ -1,5 +1,6 @@
 package com.orbit.scheduler;
 
+import com.orbit.service.CdmIngestionService;
 import com.orbit.service.SpaceTrackService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -9,6 +10,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.List;
 
 @Component
 @RequiredArgsConstructor
@@ -17,52 +20,56 @@ import java.time.LocalDateTime;
 public class TleUpdateScheduler {
 
     private final SpaceTrackService spaceTrackService;
+    private final CdmIngestionService cdmIngestionService;
 
-    @Value("${tle.critical.update.enabled:false}")
-    private boolean criticalUpdateEnabled;
+    @Value("${tle.priority.norad.ids:}")
+    private String priorityNoradIdsStr;
 
-    @Scheduled(initialDelay = 60000, fixedDelay = Long.MAX_VALUE)
+    @Value("${cdm.fetch.enabled:true}")
+    private boolean cdmFetchEnabled;
+
+    @Scheduled(initialDelay = 60_000, fixedDelay = Long.MAX_VALUE)
     public void fetchOnStartup() {
-        log.info("Application startup: Fetching latest TLE data");
-
+        log.info("Startup: fetching latest TLEs and CDMs");
         try {
             spaceTrackService.fetchAndSaveLatestTles();
-            log.info("Startup TLE fetch completed successfully");
+            fetchCdmsForPriorityIfEnabled();
+            log.info("Startup fetch completed");
         } catch (Exception e) {
-            log.error("Startup TLE fetch failed: {}", e.getMessage(), e);
+            log.error("Startup fetch failed: {}", e.getMessage(), e);
         }
     }
 
-    @Scheduled(cron = "${tle.update.cron:0 0 */6 * * *}")
+    @Scheduled(cron = "${tle.update.cron:0 30 0 * * *}")
     public void scheduledTleUpdate() {
-        log.info("Starting scheduled TLE update at {}", LocalDateTime.now());
-
+        log.info("Daily TLE update starting at {}", LocalDateTime.now());
         try {
             spaceTrackService.fetchAndSaveLatestTles();
-            log.info("Scheduled TLE update completed successfully");
+            fetchCdmsForPriorityIfEnabled();
+            log.info("Daily TLE update completed");
         } catch (Exception e) {
-            log.error("Scheduled TLE update failed: {}", e.getMessage(), e);
+            log.error("Daily TLE update failed: {}", e.getMessage(), e);
         }
     }
 
-    @Scheduled(cron = "${tle.critical.update.cron:0 0 */2 * * *}")
-    public void scheduledCriticalSatellitesUpdate() {
-        if (!criticalUpdateEnabled) {
-            return;
-        }
-
-        log.info("Starting critical satellites TLE update at {}", LocalDateTime.now());
-
+    private void fetchCdmsForPriorityIfEnabled() {
+        if (!cdmFetchEnabled) return;
+        List<Integer> priorityIds = parsePriorityIds();
+        if (priorityIds.isEmpty()) return;
         try {
-            Integer[] criticalSatellites = {25544, 48274, 43013};
-
-            for (Integer noradId : criticalSatellites) {
-                spaceTrackService.fetchAndSaveTleByNoradId(noradId);
-            }
-
-            log.info("Critical satellites TLE update completed successfully");
+            String authCookie = spaceTrackService.getOrRefreshAuthCookie();
+            cdmIngestionService.fetchAndStoreCdmsForSatellites(priorityIds, authCookie);
         } catch (Exception e) {
-            log.error("Critical satellites TLE update failed: {}", e.getMessage(), e);
+            log.error("CDM fetch failed: {}", e.getMessage(), e);
         }
+    }
+
+    private List<Integer> parsePriorityIds() {
+        if (priorityNoradIdsStr == null || priorityNoradIdsStr.isBlank()) return List.of();
+        return Arrays.stream(priorityNoradIdsStr.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .map(Integer::parseInt)
+                .toList();
     }
 }

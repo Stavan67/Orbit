@@ -2,6 +2,7 @@ package com.orbit.service;
 
 import com.orbit.dto.ConjunctionResult;
 import com.orbit.entity.TleData;
+import com.orbit.exception.CorruptTleException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.orekit.propagation.analytical.tle.TLE;
@@ -110,7 +111,7 @@ public class ConjunctionScreeningService {
             );
 
             if (relativeVelocity < 0.5) {
-                log.debug("Filtering out near-zero relative velocity ({} m/s) between {} and {} - likely co-located",
+                log.debug("Filtering near-zero relative velocity ({} m/s) for pair {}-{} — likely co-located",
                         relativeVelocity, primaryNoradId, secondaryNoradId);
                 return null;
             }
@@ -139,11 +140,14 @@ public class ConjunctionScreeningService {
 
             return result;
 
+        } catch (CorruptTleException e) {
+            // Propagated from PropagationService when orbital speed is physically implausible.
+            // This is a data quality issue, not a code error — log at DEBUG and return null
+            // so the caller skips this pair cleanly. The screening loop counts these separately.
+            log.debug("Skipping pair {}-{}: corrupt TLE ({})", primaryNoradId, secondaryNoradId, e.getMessage());
+            return null;
         } catch (Exception e) {
-            log.error("Error screening pair {}-{}: {}",
-                    primaryNoradId,
-                    secondaryNoradId,
-                    e.getMessage());
+            log.error("Error screening pair {}-{}: {}", primaryNoradId, secondaryNoradId, e.getMessage());
             return null;
         }
     }
@@ -163,27 +167,25 @@ public class ConjunctionScreeningService {
         int stepCount = 0;
 
         while (currentDate.compareTo(endDate) <= 0) {
-            try {
-                PVCoordinates primaryPV = propagationService.propagateToPV(primaryProp, currentDate);
-                PVCoordinates secondaryPV = propagationService.propagateToPV(secondaryProp, currentDate);
+            // CorruptTleException is intentionally NOT caught here — it propagates
+            // up to screenPair's specific catch block, which skips the entire pair.
+            // This avoids burning 20,000+ more time steps on a known-bad TLE.
+            PVCoordinates primaryPV = propagationService.propagateToPV(primaryProp, currentDate);
+            PVCoordinates secondaryPV = propagationService.propagateToPV(secondaryProp, currentDate);
 
-                double distance = propagationService.calculateDistance(
-                        primaryPV.getPosition(),
-                        secondaryPV.getPosition()
-                );
+            double distance = propagationService.calculateDistance(
+                    primaryPV.getPosition(),
+                    secondaryPV.getPosition()
+            );
 
-                if (distance < minDistance) {
-                    minDistance = distance;
-                    tcaDate = currentDate;
-                    primaryAtTCA = primaryPV;
-                    secondaryAtTCA = secondaryPV;
-                }
-
-                stepCount++;
-            } catch (Exception e) {
-                log.trace("Propagation failed at step {}: {}", stepCount, e.getMessage());
+            if (distance < minDistance) {
+                minDistance = distance;
+                tcaDate = currentDate;
+                primaryAtTCA = primaryPV;
+                secondaryAtTCA = secondaryPV;
             }
 
+            stepCount++;
             currentDate = currentDate.shiftedBy(coarseTimeStepSeconds);
         }
 
@@ -191,8 +193,7 @@ public class ConjunctionScreeningService {
             return null;
         }
 
-        log.trace("Coarse scan: min distance = {}m at {} ({} steps)",
-                minDistance, tcaDate, stepCount);
+        log.trace("Coarse scan: min distance = {}m at {} ({} steps)", minDistance, tcaDate, stepCount);
 
         return new CoarseResult(minDistance, tcaDate, primaryAtTCA, secondaryAtTCA);
     }
@@ -233,6 +234,10 @@ public class ConjunctionScreeningService {
                 }
 
                 stepCount++;
+            } catch (CorruptTleException e) {
+                // If a corrupt TLE is somehow encountered here (e.g. primary satellite),
+                // re-throw so screenPair can handle it cleanly.
+                throw e;
             } catch (Exception e) {
                 log.trace("Refinement propagation failed at step {}: {}", stepCount, e.getMessage());
             }
@@ -296,6 +301,7 @@ public class ConjunctionScreeningService {
 
         long startTime = System.currentTimeMillis();
         int processed = 0;
+        int corruptSkipped = 0;  // ← tracks corrupt-TLE skips separately from errors
 
         for (TleData secondaryTle : candidateTles) {
             Integer secondaryNoradId = secondaryTle.getSatellite().getNoradId();
@@ -306,18 +312,26 @@ public class ConjunctionScreeningService {
             }
 
             TLE secondaryTLE = secondaryTLECache.get(secondaryNoradId);
-
             if (secondaryTLE == null) {
                 continue;
             }
 
-            ConjunctionResult result = screenPair(
-                    primaryTLE,
-                    secondaryTLE,
-                    primaryNoradId,
-                    secondaryNoradId,
-                    screeningEpoch
-            );
+            ConjunctionResult result;
+            try {
+                result = screenPair(
+                        primaryTLE,
+                        secondaryTLE,
+                        primaryNoradId,
+                        secondaryNoradId,
+                        screeningEpoch
+                );
+            } catch (CorruptTleException e) {
+                // screenPair catches CorruptTleException and returns null, so this
+                // catch is a safety net — should not normally be reached.
+                corruptSkipped++;
+                processed++;
+                continue;
+            }
 
             if (result != null) {
                 results.add(result);
@@ -335,18 +349,20 @@ public class ConjunctionScreeningService {
                 log.info("Progress: {}/{} pairs screened ({}%) - {} pairs/sec - {} conjunctions found",
                         processed,
                         candidateTles.size(),
-                        percentComplete,
-                        rate,
+                        String.format("%.4f", percentComplete),
+                        String.format("%.4f", rate),
                         results.size());
             }
         }
 
         long totalTime = System.currentTimeMillis() - startTime;
-        log.info("Screening complete: {} conjunctions found from {} candidates in {} seconds ({} pairs/sec)",
+        log.info("Screening complete: {} conjunctions from {} candidates in {} sec ({} pairs/sec) | "
+                        + "{} corrupt TLEs skipped",
                 results.size(),
                 candidateTles.size(),
                 TimeUnit.MILLISECONDS.toSeconds(totalTime),
-                candidateTles.size() / (totalTime / 1000.0));
+                String.format("%.1f", candidateTles.size() / (totalTime / 1000.0)),
+                corruptSkipped);
 
         return results;
     }

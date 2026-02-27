@@ -1,6 +1,7 @@
 package com.orbit.controller;
 
 import com.orbit.entity.ConjunctionEvent;
+import com.orbit.scheduler.ConjunctionAnalysisScheduler;
 import com.orbit.service.ConjunctionAnalysisService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,12 +16,17 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Slf4j
 public class ConjunctionController {
+
     private final ConjunctionAnalysisService conjunctionAnalysisService;
+    private final ConjunctionAnalysisScheduler conjunctionAnalysisScheduler;
+
     @PostMapping("/analyze/{noradId}")
     public ResponseEntity<?> analyzeConjunctions(@PathVariable Integer noradId) {
         try {
-            log.info("Received request to analyze conjunctions for noradId {}", noradId);
+            log.info("Manual analysis request for NORAD {}", noradId);
             List<ConjunctionEvent> events = conjunctionAnalysisService.analyzeConjunctions(noradId);
+
+            conjunctionAnalysisScheduler.recordManualRun(noradId);
 
             long criticalCount = events.stream()
                     .filter(e -> e.getRiskLevel() == ConjunctionEvent.RiskLevel.CRITICAL)
@@ -35,7 +41,8 @@ public class ConjunctionController {
                     "totalEvents", events.size(),
                     "criticalEvents", criticalCount,
                     "highRiskEvents", highCount,
-                    "message", String.format("Found %d conjunction events (%d critical, %d high risk)",
+                    "message", String.format(
+                            "Found %d conjunction events (%d critical, %d high risk)",
                             events.size(), criticalCount, highCount)
             ));
         } catch (Exception e) {
@@ -49,7 +56,10 @@ public class ConjunctionController {
     }
 
     @GetMapping("/upcoming/{noradId}")
-    public ResponseEntity<?> getUpcomingEvents(@PathVariable Integer noradId, @RequestParam(defaultValue = "7") int days) {
+    public ResponseEntity<?> getUpcomingEvents(
+            @PathVariable Integer noradId,
+            @RequestParam(defaultValue = "7") int days
+    ) {
         try {
             log.info("Fetching upcoming events for NORAD {} (next {} days)", noradId, days);
             List<ConjunctionEvent> events = conjunctionAnalysisService.getUpcomingEvents(noradId, days);
@@ -62,7 +72,7 @@ public class ConjunctionController {
                     "events", events
             ));
         } catch (Exception e) {
-            log.error("Error fetching upcoming events for NORAD {}: ",  noradId, e);
+            log.error("Error fetching upcoming events for NORAD {}: ", noradId, e);
             return ResponseEntity.internalServerError()
                     .body(Map.of(
                             "status", "error",
@@ -74,7 +84,7 @@ public class ConjunctionController {
     @GetMapping("/high-risk/{noradId}")
     public ResponseEntity<?> getHighRiskEvents(@PathVariable Integer noradId) {
         try {
-            log.info("Fetching high risk events for NORAD {}", noradId);
+            log.info("Fetching high-risk events for NORAD {}", noradId);
             List<ConjunctionEvent> events = conjunctionAnalysisService.getHighRiskEvents(noradId);
 
             return ResponseEntity.ok(Map.of(
@@ -94,7 +104,7 @@ public class ConjunctionController {
     }
 
     @DeleteMapping("/cleanup")
-    public  ResponseEntity<?> cleanupOldEvents(@RequestParam(defaultValue = "30") int daysToKeep) {
+    public ResponseEntity<?> cleanupOldEvents(@RequestParam(defaultValue = "30") int daysToKeep) {
         try {
             log.info("Cleaning up events older than {} days", daysToKeep);
             conjunctionAnalysisService.cleanupOldEvents(daysToKeep);
@@ -112,4 +122,20 @@ public class ConjunctionController {
                     ));
         }
     }
-}
+
+    @GetMapping("/dashboard/{noradId}")
+    public ResponseEntity<?> getDashboard(@PathVariable Integer noradId) {
+        try {
+            log.info("Dashboard request for NORAD {}", noradId);
+            Map<String, Object> dashboard = conjunctionAnalysisService.getDashboard(noradId);
+            return ResponseEntity.ok(dashboard);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("status", "error", "message", e.getMessage()));
+        } catch (Exception e) {
+            log.error("Error building dashboard for NORAD {}: ", noradId, e);
+            return ResponseEntity.internalServerError()
+                    .body(Map.of("status", "error",
+                            "message", "Failed to build dashboard: " + e.getMessage()));
+        }
+    }}
