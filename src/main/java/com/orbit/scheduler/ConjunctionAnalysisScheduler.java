@@ -26,49 +26,15 @@ public class ConjunctionAnalysisScheduler {
     @Value("${conjunction.analysis.primary.norad.ids:}")
     private String primaryNoradIdsStr;
 
-    /**
-     * Minimum minutes that must have passed since the last analysis
-     * (manual OR scheduled) before the scheduler will run again.
-     *
-     * Default: 60 minutes. This prevents the scheduler from immediately
-     * re-running after you've just triggered a manual analysis via the API.
-     *
-     * Set to 0 to disable the cooldown entirely (not recommended in production).
-     *
-     * Configure in application.properties:
-     *   conjunction.analysis.cooldown.minutes=60
-     */
     @Value("${conjunction.analysis.cooldown.minutes:60}")
     private int cooldownMinutes;
 
-    /**
-     * Tracks the last time analysis ran for each NORAD ID.
-     * ConcurrentHashMap because the scheduler thread and HTTP request threads
-     * (manual API calls) can both update this simultaneously.
-     *
-     * This is in-memory only — resets on restart, which is fine. A fresh
-     * analysis on startup is not harmful.
-     */
     private final Map<Integer, LocalDateTime> lastRunByNorad = new ConcurrentHashMap<>();
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Public method — called by ConjunctionController for manual API triggers
-    // so the cooldown map stays in sync with both manual and scheduled runs.
-    // ─────────────────────────────────────────────────────────────────────────
-
-    /**
-     * Records that an analysis was just completed for a given NORAD ID.
-     * Called by {@link com.orbit.controller.ConjunctionController} after
-     * every successful manual analysis so the scheduler cooldown is respected.
-     */
     public void recordManualRun(Integer noradId) {
         lastRunByNorad.put(noradId, LocalDateTime.now());
         log.debug("Cooldown timer reset for NORAD {} (manual run recorded)", noradId);
     }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // Scheduled jobs
-    // ─────────────────────────────────────────────────────────────────────────
 
     @Scheduled(cron = "${conjunction.analysis.cron:0 0 */6 * * *}")
     public void scheduledConjunctionAnalysis() {
@@ -88,7 +54,7 @@ public class ConjunctionAnalysisScheduler {
 
         for (Integer noradId : primaryNoradIds) {
             if (!isCooldownExpired(noradId)) {
-                continue; // skip — logged inside isCooldownExpired
+                continue;
             }
 
             try {
@@ -115,16 +81,6 @@ public class ConjunctionAnalysisScheduler {
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Cooldown check
-    // ─────────────────────────────────────────────────────────────────────────
-
-    /**
-     * Returns true if enough time has passed since the last analysis run
-     * for the given NORAD ID (either manual or scheduled).
-     *
-     * If cooldownMinutes = 0, always returns true (cooldown disabled).
-     */
     private boolean isCooldownExpired(Integer noradId) {
         if (cooldownMinutes <= 0) {
             return true;
@@ -132,7 +88,7 @@ public class ConjunctionAnalysisScheduler {
 
         LocalDateTime lastRun = lastRunByNorad.get(noradId);
         if (lastRun == null) {
-            return true; // never run — proceed
+            return true;
         }
 
         long minutesSinceLastRun = ChronoUnit.MINUTES.between(lastRun, LocalDateTime.now());

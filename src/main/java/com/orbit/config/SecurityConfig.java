@@ -1,73 +1,56 @@
 package com.orbit.config;
 
-import org.springframework.beans.factory.annotation.Value;
+import com.orbit.security.JwtAuthenticationFilter;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
 
-    @Value("${api.security.admin.username:admin}")
-    private String adminUsername;
-
-    @Value("${api.security.admin.password:changeme}")
-    private String adminPassword;
-
-    @Value("${api.security.operator.username:operator}")
-    private String operatorUsername;
-
-    @Value("${api.security.operator.password:changeme}")
-    private String operatorPassword;
+    private final JwtAuthenticationFilter jwtAuthFilter;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable())
+                .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
                 .authorizeHttpRequests(auth -> auth
+                        // Public — health check, login page, and static frontend
                         .requestMatchers("/actuator/health").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
+                        .requestMatchers("/", "/index.html").permitAll()
 
-                        .requestMatchers(
-                                org.springframework.http.HttpMethod.POST,   "/api/**"
-                        ).hasRole("ADMIN")
-                        .requestMatchers(
-                                org.springframework.http.HttpMethod.DELETE, "/api/**"
-                        ).hasRole("ADMIN")
+                        // Write operations: ADMIN only
+                        .requestMatchers(HttpMethod.POST,   "/api/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/**").hasRole("ADMIN")
 
-                        .requestMatchers(
-                                org.springframework.http.HttpMethod.GET,    "/api/**"
-                        ).hasAnyRole("ADMIN", "OPERATOR")
+                        // Read operations: ADMIN or OPERATOR
+                        .requestMatchers(HttpMethod.GET, "/api/**").hasAnyRole("ADMIN", "OPERATOR")
 
                         .anyRequest().authenticated()
                 )
-                .httpBasic(basic -> basic.realmName("Orbit Conjunction System"));
+
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+
         return http.build();
     }
 
     @Bean
-    public UserDetailsService userDetailsService(PasswordEncoder encoder) {
-        return new InMemoryUserDetailsManager(
-                User.withUsername(adminUsername)
-                        .password(encoder.encode(adminPassword))
-                        .roles("ADMIN", "OPERATOR")
-                        .build(),
-                User.withUsername(operatorUsername)
-                        .password(encoder.encode(operatorPassword))
-                        .roles("OPERATOR")
-                        .build()
-        );
-    }
-
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config)
+            throws Exception {
+        return config.getAuthenticationManager();
     }
 }

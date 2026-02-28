@@ -45,9 +45,9 @@ public class RiskAssessmentService {
     }
 
     private RiskLevel classifyByPc(double pc) {
-        if (pc >= 1e-2) return RiskLevel.CRITICAL;  // 1 in 100
-        if (pc >= 1e-3) return RiskLevel.HIGH;       // 1 in 1,000
-        if (pc >= 1e-4) return RiskLevel.MEDIUM;     // 1 in 10,000
+        if (pc >= 1e-2) return RiskLevel.CRITICAL;
+        if (pc >= 1e-3) return RiskLevel.HIGH;
+        if (pc >= 1e-4) return RiskLevel.MEDIUM;
         return RiskLevel.LOW;
     }
 

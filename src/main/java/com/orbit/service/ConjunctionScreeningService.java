@@ -141,9 +141,6 @@ public class ConjunctionScreeningService {
             return result;
 
         } catch (CorruptTleException e) {
-            // Propagated from PropagationService when orbital speed is physically implausible.
-            // This is a data quality issue, not a code error — log at DEBUG and return null
-            // so the caller skips this pair cleanly. The screening loop counts these separately.
             log.debug("Skipping pair {}-{}: corrupt TLE ({})", primaryNoradId, secondaryNoradId, e.getMessage());
             return null;
         } catch (Exception e) {
@@ -167,9 +164,6 @@ public class ConjunctionScreeningService {
         int stepCount = 0;
 
         while (currentDate.compareTo(endDate) <= 0) {
-            // CorruptTleException is intentionally NOT caught here — it propagates
-            // up to screenPair's specific catch block, which skips the entire pair.
-            // This avoids burning 20,000+ more time steps on a known-bad TLE.
             PVCoordinates primaryPV = propagationService.propagateToPV(primaryProp, currentDate);
             PVCoordinates secondaryPV = propagationService.propagateToPV(secondaryProp, currentDate);
 
@@ -235,8 +229,6 @@ public class ConjunctionScreeningService {
 
                 stepCount++;
             } catch (CorruptTleException e) {
-                // If a corrupt TLE is somehow encountered here (e.g. primary satellite),
-                // re-throw so screenPair can handle it cleanly.
                 throw e;
             } catch (Exception e) {
                 log.trace("Refinement propagation failed at step {}: {}", stepCount, e.getMessage());
@@ -301,7 +293,7 @@ public class ConjunctionScreeningService {
 
         long startTime = System.currentTimeMillis();
         int processed = 0;
-        int corruptSkipped = 0;  // ← tracks corrupt-TLE skips separately from errors
+        int corruptSkipped = 0;
 
         for (TleData secondaryTle : candidateTles) {
             Integer secondaryNoradId = secondaryTle.getSatellite().getNoradId();

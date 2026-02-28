@@ -31,6 +31,11 @@
       "defaultValue": 7
     },
     {
+      "name": "tle.priority.norad.ids",
+      "type": "java.lang.String",
+      "description": "Comma-separated list of NORAD IDs to prioritise for TLE updates."
+    },
+    {
       "name": "spacetrack.username",
       "type": "java.lang.String",
       "description": "Space-Track API username for authentication."
@@ -57,6 +62,170 @@
       "type": "java.lang.Integer",
       "description": "HTTP read timeout for Space-Track API (seconds).",
       "defaultValue": 60
+    },
+    {
+      "name": "cdm.fetch.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Enable or disable CDM ingestion from Space-Track.",
+      "defaultValue": true
+    },
+    {
+      "name": "conjunction.analysis.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Enable or disable scheduled conjunction analysis.",
+      "defaultValue": true
+    },
+    {
+      "name": "conjunction.analysis.cron",
+      "type": "java.lang.String",
+      "description": "Cron expression for scheduled conjunction analysis runs.",
+      "defaultValue": "0 0 2 * * *"
+    },
+    {
+      "name": "conjunction.analysis.primary.norad.ids",
+      "type": "java.lang.String",
+      "description": "Comma-separated list of primary satellite NORAD IDs to analyse."
+    },
+    {
+      "name": "conjunction.analysis.cooldown.minutes",
+      "type": "java.lang.Integer",
+      "description": "Minimum minutes between analysis runs for the same satellite.",
+      "defaultValue": 60
+    },
+    {
+      "name": "conjunction.cleanup.cron",
+      "type": "java.lang.String",
+      "description": "Cron expression for purging old conjunction events.",
+      "defaultValue": "0 0 3 * * SUN"
+    },
+    {
+      "name": "conjunction.prediction.days",
+      "type": "java.lang.Integer",
+      "description": "Number of days ahead to propagate orbits when screening for conjunctions.",
+      "defaultValue": 7
+    },
+    {
+      "name": "conjunction.time.step.seconds",
+      "type": "java.lang.Double",
+      "description": "Time step in seconds used during coarse orbit propagation.",
+      "defaultValue": 30
+    },
+    {
+      "name": "conjunction.min.distance.km",
+      "type": "java.lang.Double",
+      "description": "Miss-distance threshold in km below which a close approach is recorded.",
+      "defaultValue": 150.0
+    },
+    {
+      "name": "conjunction.filter.altitude.tolerance.km",
+      "type": "java.lang.Double",
+      "description": "Altitude band tolerance in km used to pre-filter candidate satellites.",
+      "defaultValue": 150.0
+    },
+    {
+      "name": "conjunction.filter.inclination.tolerance.deg",
+      "type": "java.lang.Double",
+      "description": "Inclination tolerance in degrees used to pre-filter candidate satellites.",
+      "defaultValue": 60.0
+    },
+    {
+      "name": "conjunction.filter.raan.tolerance.deg",
+      "type": "java.lang.Double",
+      "description": "RAAN tolerance in degrees used in the optional RAAN refinement filter.",
+      "defaultValue": 45.0
+    },
+    {
+      "name": "conjunction.filter.raan.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Enable the RAAN-based candidate refinement filter (skipped for polar orbits).",
+      "defaultValue": true
+    },
+    {
+      "name": "conjunction.refinement.fine.step.seconds",
+      "type": "java.lang.Double",
+      "description": "Fine time step in seconds for TCA refinement pass.",
+      "defaultValue": 1.0
+    },
+    {
+      "name": "conjunction.refinement.polish.step.seconds",
+      "type": "java.lang.Double",
+      "description": "Polish time step in seconds for final TCA refinement pass.",
+      "defaultValue": 0.1
+    },
+    {
+      "name": "conjunction.refinement.threshold.km",
+      "type": "java.lang.Double",
+      "description": "Miss-distance threshold in km that triggers the fine-step refinement pass.",
+      "defaultValue": 100.0
+    },
+    {
+      "name": "conjunction.refinement.window.seconds",
+      "type": "java.lang.Integer",
+      "description": "Time window in seconds around an initial close-approach point used for TCA refinement.",
+      "defaultValue": 120
+    },
+    {
+      "name": "conjunction.screening.batch.size",
+      "type": "java.lang.Integer",
+      "description": "Number of candidate satellites processed per screening batch.",
+      "defaultValue": 100
+    },
+    {
+      "name": "conjunction.screening.log.interval",
+      "type": "java.lang.Integer",
+      "description": "Log a progress message every N satellites during screening.",
+      "defaultValue": 100
+    },
+    {
+      "name": "conjunction.pc.combined.hbr.m",
+      "type": "java.lang.Double",
+      "description": "Combined hard-body radius in metres used for Pc calculation.",
+      "defaultValue": 10.0
+    },
+    {
+      "name": "conjunction.pc.log.threshold",
+      "type": "java.lang.Double",
+      "description": "Minimum Pc value above which a result is written to the log.",
+      "defaultValue": 1e-6
+    },
+    {
+      "name": "conjunction.cdm.tca.window.hours",
+      "type": "java.lang.Integer",
+      "description": "Time window in hours within which a CDM TCA is matched to a TLE-screened conjunction.",
+      "defaultValue": 6
+    },
+    {
+      "name": "api.security.admin.username",
+      "type": "java.lang.String",
+      "description": "Username for the built-in ADMIN account.",
+      "defaultValue": "admin"
+    },
+    {
+      "name": "api.security.admin.password",
+      "type": "java.lang.String",
+      "description": "Password for the built-in ADMIN account. Load from an environment variable in production."
+    },
+    {
+      "name": "api.security.operator.username",
+      "type": "java.lang.String",
+      "description": "Username for the built-in OPERATOR account.",
+      "defaultValue": "operator"
+    },
+    {
+      "name": "api.security.operator.password",
+      "type": "java.lang.String",
+      "description": "Password for the built-in OPERATOR account. Load from an environment variable in production."
+    },
+    {
+      "name": "jwt.secret",
+      "type": "java.lang.String",
+      "description": "HMAC-SHA256 signing secret for JWT tokens. Must be at least 32 characters. Generate with: openssl rand -hex 32."
+    },
+    {
+      "name": "jwt.expiration-ms",
+      "type": "java.lang.Long",
+      "description": "JWT token validity period in milliseconds.",
+      "defaultValue": 3600000
     }
   ]
 }

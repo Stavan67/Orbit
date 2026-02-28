@@ -18,20 +18,9 @@ public class SatelliteFilterService {
     @Value("${conjunction.filter.altitude.tolerance.km:150.0}")
     private double altitudeToleranceKm;
 
-    /**
-     * Inclination tolerance in degrees. Note: we compare *effective* inclinations
-     * (i.e. min(i, 180-i), which represents the maximum latitude a satellite reaches).
-     * Default raised to 60° to capture cross-inclination conjunctions that are common
-     * in LEO (e.g. 97° SSO primary vs. 28°–75° debris).
-     */
     @Value("${conjunction.filter.inclination.tolerance.deg:60.0}")
     private double inclinationToleranceDeg;
 
-    /**
-     * Inclination above which a satellite is considered "polar". Polar satellites
-     * have ground tracks that cross every longitude and every RAAN, so RAAN-based
-     * pre-filtering must be skipped for them entirely.
-     */
     private static final double POLAR_INCLINATION_THRESHOLD_DEG = 60.0;
 
     private static final double CO_LOCATION_ALTITUDE_TOLERANCE_KM = 1.0;
@@ -93,20 +82,6 @@ public class SatelliteFilterService {
         return candidates;
     }
 
-    /**
-     * Optionally narrows the candidate set using RAAN proximity.
-     *
-     * CRITICAL RULE: If the primary satellite is polar (inclination > 60°),
-     * this filter MUST be skipped entirely. A polar satellite's ground track
-     * crosses every meridian on Earth, meaning it can encounter objects at
-     * ANY right ascension of the ascending node. Applying a RAAN window to
-     * a polar primary will silently discard valid conjunctions — exactly the
-     * bug that caused real Space-Track CDM pairs to be missed.
-     *
-     * For non-polar (low-inclination) primaries, a single RAAN window is a
-     * reasonable heuristic because their ground tracks stay in a narrower
-     * longitude band, making cross-RAAN conjunctions geometrically rare.
-     */
     public List<TleData> refineByRaan(
             TleData primaryTle,
             List<TleData> candidates,
@@ -116,9 +91,6 @@ public class SatelliteFilterService {
         boolean primaryIsPolar = primaryElements.getInclination() > POLAR_INCLINATION_THRESHOLD_DEG
                 || primaryElements.getInclination() < (180.0 - POLAR_INCLINATION_THRESHOLD_DEG);
 
-        // FIX: For polar/high-inclination primaries, skip RAAN filtering entirely.
-        // Their ground track crosses every RAAN — no candidate can be ruled out
-        // on RAAN grounds alone.
         if (primaryIsPolar) {
             log.info("Polar primary (i={} deg) — RAAN filter SKIPPED. "
                             + "Polar ground tracks cross all RAANs; filtering here would drop valid conjunctions.",
@@ -126,7 +98,6 @@ public class SatelliteFilterService {
             return candidates;
         }
 
-        // Non-polar case: single-window RAAN filter is a reasonable heuristic.
         List<TleData> refined = candidates.stream()
                 .filter(tle -> {
                     OrbitalElements secondary = extractOrbitalElements(tle);
@@ -174,9 +145,6 @@ public class SatelliteFilterService {
         if (raanDiff > 180.0) raanDiff = 360.0 - raanDiff;
         if (raanDiff > CO_LOCATION_RAAN_TOLERANCE_DEG) return false;
 
-        if (Math.abs(e1.getMeanMotion() - e2.getMeanMotion()) > CO_LOCATION_MEAN_MOTION_TOLERANCE)
-            return false;
-
-        return true;
+        return Math.abs(e1.getMeanMotion() - e2.getMeanMotion()) <= CO_LOCATION_MEAN_MOTION_TOLERANCE;
     }
 }

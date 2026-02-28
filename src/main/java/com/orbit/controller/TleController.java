@@ -17,7 +17,7 @@ public class TleController {
     private final SpaceTrackService spaceTrackService;
 
     @PostMapping("/fetch/all")
-    public ResponseEntity<String> fetchAllTles() {
+    public ResponseEntity<?> fetchAllTles() {
         try{
             log.info("Received request to fetch all TLE data");
             spaceTrackService.fetchAndSaveLatestTles();
@@ -30,7 +30,7 @@ public class TleController {
     }
 
     @PostMapping("/fetch/{noradId}")
-    public ResponseEntity<String> fetchTleByNoradId(@PathVariable Integer noradId) {
+    public ResponseEntity<?> fetchTleByNoradId(@PathVariable Integer noradId) {
         try{
             log.info("Received request to fetch TLE data by norad ID: {}", noradId);
             spaceTrackService.fetchAndSaveTleByNoradId(noradId);

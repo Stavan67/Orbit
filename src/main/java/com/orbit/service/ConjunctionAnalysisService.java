@@ -24,6 +24,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.time.Duration;
+import java.time.ZoneOffset;
 
 @Service
 @RequiredArgsConstructor
@@ -40,8 +42,6 @@ public class ConjunctionAnalysisService {
     private final ProbabilityOfCollisionService pcService;
     private final ConjunctionDeduplicationService deduplicationService;
     private final CdmIngestionService cdmIngestionService;
-
-    private AlertingService alertingService;
 
     @Value("${conjunction.filter.raan.tolerance.deg:45.0}")
     private double raanToleranceDeg;
@@ -170,9 +170,6 @@ public class ConjunctionAnalysisService {
 
         List<ConjunctionEvent> savedEvents = conjunctionEventRepository.saveAll(eventsToSave);
 
-        if (alertingService != null && !savedEvents.isEmpty()) {
-            alertingService.evaluateAndAlertBatch(savedEvents, primaryNoradId);
-        }
         logSummary(savedEvents);
         return savedEvents;
     }
@@ -378,12 +375,31 @@ public class ConjunctionAnalysisService {
             event.setCdmId(bestCdm.getCdmId());
             event.setDetectionSource(ConjunctionEvent.DetectionSource.CDM_ONLY);
             event.setDedupKey(dedupKey);
-            event.setRiskLevel(riskLevelFromPc(bestCdm.getPc()));
+            // Apply both Pc and geometry — take whichever is more dangerous
+            RiskLevel pcRisk = riskLevelFromPc(bestCdm.getPc());
+            RiskLevel geoRisk = riskLevelFromMissDistance(bestCdm.getMissDistanceM(), bestCdm.getTca());
+            event.setRiskLevel(higher(pcRisk, geoRisk));
 
             cdmOnlyEvents.add(event);
         }
 
         return cdmOnlyEvents;
+    }
+
+    private RiskLevel riskLevelFromMissDistance(Double missDistanceM, LocalDateTime tca) {
+        if (missDistanceM == null || tca == null) return RiskLevel.LOW;
+        double missKm = missDistanceM / 1000.0;
+        long hoursToTca = Math.max(0L, Duration.between(LocalDateTime.now(ZoneOffset.UTC), tca).toHours());
+
+        if (missKm < 1.0 && hoursToTca < 24)  return RiskLevel.CRITICAL;
+        if (missKm < 2.0)                      return RiskLevel.HIGH;
+        if (missKm < 5.0 && hoursToTca < 48)  return RiskLevel.HIGH;
+        if (missKm < 10.0)                     return RiskLevel.MEDIUM;
+        return RiskLevel.LOW;
+    }
+
+    private RiskLevel higher(RiskLevel a, RiskLevel b) {
+        return a.ordinal() <= b.ordinal() ? a : b;
     }
 
     private RiskLevel riskLevelFromPc(double pc) {

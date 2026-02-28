@@ -82,9 +82,6 @@ public class SpaceTrackService {
     public void fetchAndSaveTleByNoradId(Integer noradId) throws IOException, InterruptedException {
         log.info("Fetching TLE for NORAD {}", noradId);
         authenticate();
-
-        // FIX: "EPOCH desc" contains a space which is illegal in a URI path.
-        // Must be percent-encoded as "EPOCH%20desc" to avoid URISyntaxException.
         String query = config.getBaseUrl()
                 + String.format(
                 "/basicspacedata/query/class/gp/NORAD_CAT_ID/%d/orderby/EPOCH%%20desc/limit/1/format/json",
