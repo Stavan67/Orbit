@@ -12,7 +12,7 @@
 
 ## 🎯 Project Goal
 
-ORBIT gives small satellite operators, universities running CubeSats, early-stage commercial operators with one to five satellites, an independent, self-hosted conjunction screening capability using entirely public data.
+ORBIT provides an independent, self-hosted conjunction screening capability using entirely public data for small satellite operators, universities running CubeSats and early-stage commercial operators with one to five satellites.
 
 Commercial SSA services (LeoLabs, ExoAnalytic, SpaceFence) are expensive. Space-Track.org issues Conjunction Data Messages (CDMs) only for a monitored subset of object pairs. ORBIT fills the gap:
 
@@ -171,7 +171,7 @@ For each CDM group (grouped by deduplicated pair-hour key), if no matching event
 
 This catches geometrically hard cases: fast near-head-on encounters (~14–15 km/s) where the 30-second time step misses the event. Space-Track's high-fidelity tracking detects these and issues CDMs.
 
-> ⚠️ **CDM-only events are clearly labelled** in the database and dashboard. They represent conjunctions that this system's independent screening could not detect — they are real threats surfaced from authoritative external data, not independent detections.
+>  **CDM-only events are clearly labelled** in the database and dashboard. They represent conjunctions that this system's independent screening could not detect — they are real threats surfaced from authoritative external data, not independent detections.
 
 ---
 
@@ -254,6 +254,40 @@ The dashboard displays these as visual badges: **TLE SCREENED** (green), **CDM C
 **Single primary satellite** — The system screens one satellite at a time against the full catalogue. Full catalogue-vs-catalogue screening would require significantly more compute and is not the intended use case.
 
 **Requires app to be running at scheduled time** — Schedulers are in-process Spring threads. If the application is not running at 02:00 UTC, the daily analysis is missed. For reliable daily operation, ensure the application is running continuously or trigger analysis manually.
+
+---
+
+## 🔬 Design Decisions & Industry Context
+
+### Why ORBIT Does Not Use Covariance Matrices
+
+The Foster 2D model mathematically requires a covariance matrix for each object, a matrix describing position and velocity uncertainty across all axes. For a system screening ~30,000 objects, that means 30,000 covariance matrices updated daily.
+
+The problem is that **real covariance data for the full catalogue is not publicly available**. Space-Track's `cdm_public` endpoint includes covariance only for specific pairs it has already flagged as conjunction threats, not for the general catalogue. The full covariance catalogue is classified, accessible only to US government entities and vetted commercial operators under data-sharing agreements.
+
+Even if it were available, covariance cannot be reconstructed from a TLE. TLEs are a compressed, averaged representation of a precise orbit determination solution, and the covariance information is deliberately discarded in that compression. The format was never designed to carry it.
+
+**What ORBIT does instead** is the standard approach for academic tools and small operators: the TLE-age model estimates position uncertainty statistically from empirical studies of how SGP4 error grows with time since epoch. It is not wrong, it reflects realistic propagation uncertainty. It is simply less precise than a real covariance matrix. The resulting Pc values are correct in order of magnitude and appropriate for risk screening, which is why the system clearly labels them `TLE_AGE_MODEL` and defers to CDM Pc the moment authoritative data becomes available for a specific pair.
+
+Every open-source conjunction tool faces this same constraint. This system handles it the same way the academic literature recommends.
+
+---
+
+### How Major Space Agencies Handle Conjunction Assessment
+
+Major agencies operate at a fundamentally different level of the data stack — one that is largely inaccessible to the public.
+
+**US Space Surveillance Network (SSN)** is the foundation everything else builds on. ~30 ground-based radar and optical sensors worldwide track every catalogued object multiple times per day. The internal product is a full state vector with a real covariance matrix for every object, updated continuously. TLEs are a lossy, publicly shareable *summary* of this data which is accurate to hundreds of metres to a few kilometres. SSN internal orbits are accurate to tens of metres for active payloads.
+
+**18th Space Control Squadron** runs CAESAR (Conjunction Assessment Expert System for Advanced Results) at Vandenberg Space Force Base. It screens the full catalogue against all active payloads simultaneously using real covariance matrices, and generates CDMs automatically for any pair crossing the alert threshold. The CDMs on Space-Track.org are CAESAR outputs.
+
+**NASA CARA** (Conjunction Assessment Risk Analysis) at Goddard performs a second layer of analysis for NASA missions, applying manual review and more sophisticated models. For high-value missions the threshold for beginning manoeuvre planning is Pc ≥ 1 in 100,000 which is far more conservative than the general 1 in 10,000 threshold and a Debris Avoidance Manoeuvre (DAM) is executed if Pc exceeds 1 in 1,000. The ISS performs several DAMs per year.
+
+**ESA's ARES** system at ESOC runs independent conjunction assessment using SSN data provided under a data-sharing agreement, combined with ESA's own orbit determination for ESA satellites.
+
+**Do they depend on TLE data?** No. TLEs are what they publish for public consumption. Internally they work with full state vectors and real covariances from their own sensor networks. SpaceX screens its Starlink constellation using onboard GPS-derived precise ephemerides which is far more accurate than TLEs and executes autonomous avoidance manoeuvres without human review for lower-risk events.
+
+For a small operator with no access to classified or proprietary data, ORBIT's approach, full catalogue TLE screening with CDM upgrade where available is the **highest accuracy achievable from public data alone**. It is the same foundational approach used by commercial SSA companies like LeoLabs, except they supplement it with proprietary radar observations to generate their own covariance, which is exactly what they charge for.
 
 ---
 
