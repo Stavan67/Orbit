@@ -375,7 +375,6 @@ public class ConjunctionAnalysisService {
             event.setCdmId(bestCdm.getCdmId());
             event.setDetectionSource(ConjunctionEvent.DetectionSource.CDM_ONLY);
             event.setDedupKey(dedupKey);
-            // Apply both Pc and geometry — take whichever is more dangerous
             RiskLevel pcRisk = riskLevelFromPc(bestCdm.getPc());
             RiskLevel geoRisk = riskLevelFromMissDistance(bestCdm.getMissDistanceM(), bestCdm.getTca());
             event.setRiskLevel(higher(pcRisk, geoRisk));
@@ -452,10 +451,14 @@ public class ConjunctionAnalysisService {
         eventsByRisk.put("high", high);
         eventsByRisk.put("medium", medium);
 
+        LocalDateTime lastAnalysis = conjunctionEventRepository
+                .findLastAnalysisTimeByPrimaryNoradId(noradId)
+                .orElse(null);
+
         Map<String, Object> response = new java.util.LinkedHashMap<>();
         response.put("primaryNorad", noradId);
         response.put("primaryName", satellite.getName());
-        response.put("generatedAt", now.toString());
+        response.put("lastAnalysisTime", lastAnalysis != null ? lastAnalysis.toString() : null);
         response.put("counts", counts);
         response.put("events", eventsByRisk);
         return response;

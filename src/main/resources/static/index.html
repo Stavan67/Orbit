@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>ORBIT — Conjunction Monitor</title>
+    <title>Orbit</title>
     <link rel="preconnect" href="https://fonts.googleapis.com"/>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet"/>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -41,7 +41,6 @@
             overflow-x: hidden;
         }
 
-        /* ── Canvas starfield ─────────────────────────────────────── */
         #starfield {
             position: fixed;
             inset: 0;
@@ -49,7 +48,6 @@
             pointer-events: none;
         }
 
-        /* ── Animations ───────────────────────────────────────────── */
         @keyframes fadeUp  { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
         @keyframes spin    { to { transform: rotate(360deg); } }
         @keyframes blink   { 0%,100%{opacity:1} 50%{opacity:0.2} }
@@ -77,7 +75,6 @@
         .e3 { animation: fadeUp 0.4s 0.24s ease both; }
         .e4 { animation: fadeUp 0.4s 0.32s ease both; }
 
-        /* Subtle scanline overlay */
         body::after {
             content: '';
             position: fixed;
@@ -93,7 +90,6 @@
             z-index: 1;
         }
 
-        /* ── Layout ───────────────────────────────────────────────── */
         .page {
             max-width: 1140px;
             margin: 0 auto;
@@ -102,7 +98,6 @@
             z-index: 2;
         }
 
-        /* ── Topbar ───────────────────────────────────────────────── */
         .bar {
             display: flex; align-items: center; justify-content: space-between;
             padding: 18px 0; border-bottom: 1px solid var(--b1);
@@ -113,7 +108,6 @@
         }
         .bar-left { display: flex; align-items: center; gap: 16px; }
 
-        /* Orbit logo — satellite icon */
         .logo {
             width: 34px; height: 34px;
             display: flex; align-items: center; justify-content: center;
@@ -158,7 +152,6 @@
             animation: blink 2.5s ease-in-out infinite;
         }
 
-        /* ── Sat header ───────────────────────────────────────────── */
         .sat-hdr {
             display: flex; justify-content: space-between; align-items: flex-end;
             padding-bottom: 22px; border-bottom: 1px solid var(--b1); margin-bottom: 28px;
@@ -174,7 +167,6 @@
         .mi-lbl { font-size: 9px; letter-spacing: 2px; color: var(--dim); text-transform: uppercase; }
         .mi-val { font-size: 11px; color: var(--text); margin-top: 4px; }
 
-        /* ── Count cards ──────────────────────────────────────────── */
         .counts { display: grid; grid-template-columns: repeat(4,1fr); gap: 2px; margin-bottom: 36px; }
         .cnt {
             padding: 18px 20px;
@@ -207,7 +199,6 @@
         .cnt.t .cnt-n { color: var(--faint);  }
         .cnt-l { font-size: 9px; letter-spacing: 3px; color: var(--dim); margin-top: 6px; text-transform: uppercase; }
 
-        /* ── Section divider ──────────────────────────────────────── */
         .sec {
             font-size: 9px; letter-spacing: 4px; text-transform: uppercase; color: var(--dim);
             display: flex; align-items: center; gap: 12px; margin-bottom: 14px;
@@ -217,7 +208,6 @@
         .sec.sh { color: var(--amber); }
         .sec.sm { color: var(--yellow); }
 
-        /* ── Primary threat card ──────────────────────────────────── */
         .pc {
             background: linear-gradient(135deg, rgba(92,26,26,0.15), var(--bg2) 60%);
             border: 1px solid var(--red2);
@@ -229,7 +219,6 @@
             content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
             background: linear-gradient(90deg, var(--red), rgba(224,82,82,0.3) 60%, transparent);
         }
-        /* subtle grid texture */
         .pc::after {
             content: '';
             position: absolute; inset: 0;
@@ -264,13 +253,11 @@
         .st { font-size: 13px; font-weight: 500; margin-top: 3px; }
         .sc2 { font-size: 13px; color: var(--amber); font-weight: 500; margin-top: 8px; }
 
-        /* ── Source badges ────────────────────────────────────────── */
         .sb { font-size: 8px; letter-spacing: 1.5px; padding: 3px 8px; border: 1px solid; display: inline-block; }
         .sb.tle { border-color: #1a3d27; color: var(--green); }
         .sb.cdm { border-color: #163040; color: var(--cyan); }
         .sb.cdo { border-color: var(--amber2); color: var(--amber); }
 
-        /* ── Table ────────────────────────────────────────────────── */
         .tbl-wrap {
             margin-bottom: 32px;
             border: 1px solid var(--b1);
@@ -297,7 +284,6 @@
         .pill.sh { border-color: var(--amber2); color: var(--amber); }
         .pill.sm { border-color: #4a3a10;       color: var(--yellow); }
 
-        /* ── States ───────────────────────────────────────────────── */
         .ctr {
             display: flex; flex-direction: column;
             align-items: center; justify-content: center;
@@ -329,14 +315,12 @@
             color: var(--dim); font-size: 11px; text-align: center; line-height: 2.4;
         }
 
-        /* ── Footer ───────────────────────────────────────────────── */
         .ft {
             border-top: 1px solid var(--b1); padding: 16px 0;
             display: flex; justify-content: space-between;
             font-size: 10px; color: var(--dim); letter-spacing: 1px; margin-top: 16px;
         }
 
-        /* ── Login screen ─────────────────────────────────────────── */
         .login-wrap { min-height:100vh; display:flex; align-items:center; justify-content:center; }
         .login-box { width:340px; border:1px solid var(--b1); background:var(--bg2); padding:40px 36px; text-align:center; position:relative; }
         .login-box::before { content:""; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,transparent,var(--amber),transparent); }
@@ -356,7 +340,6 @@
         .logout-btn { background:transparent; border:1px solid var(--b2); color:var(--dim); font-family:var(--mono); font-size:9px; letter-spacing:2px; padding:4px 10px; cursor:pointer; transition:border-color 0.2s,color 0.2s; }
         .logout-btn:hover { border-color:var(--red); color:var(--red); }
 
-        /* ── Responsive ───────────────────────────────────────────── */
         @media (max-width: 760px) {
             .pc-inner { grid-template-columns: 1fr; }
             .pc-side { border-left: none; border-top: 1px solid var(--b1); flex-direction: row; flex-wrap: wrap; gap: 16px; }
@@ -373,14 +356,10 @@
 </head>
 <body>
 
-<!-- Starfield canvas sits behind everything -->
 <canvas id="starfield"></canvas>
 
 <div class="page" id="root"></div>
 
-<!-- ═══════════════════════════════════════════════════════════
-     Starfield + Shooting Stars
-════════════════════════════════════════════════════════════ -->
 <script>
     (function(){
         const canvas = document.getElementById('starfield');
@@ -390,7 +369,6 @@
         const STAR_COUNT    = 320;
         const SHOOTER_MAX   = 5;
 
-        /* ── Stars ── */
         const stars = [];
         function initStars(){
             stars.length = 0;
@@ -400,26 +378,22 @@
                     y: Math.random()*H,
                     r: Math.random()*1.1+0.2,
                     a: Math.random()*0.7+0.1,
-                    // twinkle phase
                     phase: Math.random()*Math.PI*2,
                     speed: Math.random()*0.008+0.003
                 });
             }
         }
 
-        /* ── Shooting stars ── */
         const shooters = [];
         function spawnShooter(){
             if(shooters.length >= SHOOTER_MAX) return;
-            // Start anywhere along the top or left edges
             const fromTop = Math.random() < 0.6;
             const x = fromTop ? Math.random()*W : 0;
             const y = fromTop ? 0 : Math.random()*H*0.5;
-            const angle = (Math.random()*30+15) * Math.PI/180; // 15–45 deg downward
+            const angle = (Math.random()*30+15) * Math.PI/180;
             const speed = Math.random()*6+4;
             const length = Math.random()*220+120;
             const life   = length/speed;
-            // pick a colour: mostly white, occasional amber or cyan
             const palette = ['255,255,255','245,166,35','91,187,212'];
             const col = palette[Math.random()<0.8 ? 0 : Math.random()<0.5 ? 1 : 2];
             shooters.push({ x, y,
@@ -427,12 +401,10 @@
                 vy: Math.sin(angle)*speed,
                 len: length,
                 col, life, age:0,
-                // trail — store past positions
                 trail: []
             });
         }
 
-        /* ── Resize ── */
         function resize(){
             W = canvas.width  = window.innerWidth;
             H = canvas.height = window.innerHeight;
@@ -441,7 +413,6 @@
         window.addEventListener('resize', resize);
         resize();
 
-        // Spawn shooters on a random schedule
         function scheduleShooter(){
             setTimeout(()=>{
                 spawnShooter();
@@ -449,19 +420,16 @@
             }, Math.random()*3200+800);
         }
         scheduleShooter();
-        // Burst a couple at start
         setTimeout(spawnShooter, 600);
         setTimeout(spawnShooter, 1400);
 
-        /* ── Render ── */
         let last = 0;
         function draw(ts){
-            const dt = Math.min((ts-last)/16.67, 3); // normalise to ~60fps
+            const dt = Math.min((ts-last)/16.67, 3);
             last = ts;
 
             ctx.clearRect(0,0,W,H);
 
-            // Deep space radial gradient
             const grad = ctx.createRadialGradient(W*0.5,H*0.35,0, W*0.5,H*0.35,W*0.75);
             grad.addColorStop(0,   'rgba(10,18,45,0.55)');
             grad.addColorStop(0.5, 'rgba(4,8,20,0.35)');
@@ -469,7 +437,6 @@
             ctx.fillStyle = grad;
             ctx.fillRect(0,0,W,H);
 
-            // Stars
             const now = ts/1000;
             for(const s of stars){
                 const twinkle = s.a * (0.6 + 0.4*Math.sin(now*s.speed*60 + s.phase));
@@ -479,7 +446,6 @@
                 ctx.fill();
             }
 
-            // Shooting stars
             for(let i=shooters.length-1; i>=0; i--){
                 const s = shooters[i];
                 s.age += dt;
@@ -492,14 +458,12 @@
                 s.y += s.vy*dt;
 
                 const progress = s.age/s.life;
-                // fade in then fade out
                 const fade = progress < 0.15
                     ? progress/0.15
                     : progress > 0.6
                         ? 1-(progress-0.6)/0.4
                         : 1;
 
-                // Trail gradient
                 if(s.trail.length > 1){
                     const tail = s.trail[0];
                     const head = s.trail[s.trail.length-1];
@@ -517,7 +481,6 @@
                     ctx.stroke();
                 }
 
-                // Head glow
                 const hg = ctx.createRadialGradient(s.x,s.y,0, s.x,s.y,5);
                 hg.addColorStop(0,   `rgba(${s.col},${0.95*fade})`);
                 hg.addColorStop(0.4, `rgba(${s.col},${0.4*fade})`);
@@ -534,14 +497,10 @@
     })();
 </script>
 
-<!-- ═══════════════════════════════════════════════════════════
-     React App
-════════════════════════════════════════════════════════════ -->
 <script type="text/babel">
     const { useState, useEffect, useRef } = React;
-    const NORAD = 16181;
+    const NORAD = 1245;
 
-    /* ── Helpers ── */
     const tca = s => {
         if (!s) return { d:'—', t:'—' };
         const dt = new Date(s.includes('Z') ? s : s+'Z');
@@ -555,7 +514,6 @@
     const miss = m => m==null?'—':m<1000?Math.round(m)+' m':(m/1000).toFixed(2)+' km';
     const vel  = v => v==null?'—':(v/1000).toFixed(2)+' km/s';
 
-    /* ── Login Screen ── */
     function LoginScreen({ onLogin }) {
         const [username, setUsername] = useState('');
         const [password, setPassword] = useState('');
@@ -623,7 +581,6 @@
         );
     }
 
-    /* ── Auth-aware fetch ── */
     function makeAuthFetch(token, onExpired) {
         return (url, opts = {}) => fetch(url, {
             ...opts,
@@ -635,14 +592,12 @@
         });
     }
 
-    /* ── Source badge ── */
     function Src({s,c}){
         if(s==='CDM_ONLY') return <span className="sb cdo">CDM ONLY</span>;
         if(c) return <span className="sb cdm">CDM CONFIRMED</span>;
         return <span className="sb tle">TLE SCREENED</span>;
     }
 
-    /* ── Primary threat card ── */
     function Primary({ev}){
         const t=tca(ev.tca);
         return <div className="pc e2">
@@ -671,7 +626,6 @@
         </div>;
     }
 
-    /* ── Events table ── */
     function Table({evs}){
         if(!evs||!evs.length) return null;
         return <div className="tbl-wrap">
@@ -701,14 +655,11 @@
         </div>;
     }
 
-    /* ── Dashboard (shown after login) ── */
     function Dashboard({ token, username, roles, onLogout }) {
         const [data,    setData]    = useState(null);
         const [loading, setLoading] = useState(true);
         const [error,   setError]   = useState(null);
         const [ts,      setTs]      = useState('');
-
-        // Token expired → back to login
         const authFetch = makeAuthFetch(token, onLogout);
 
         const load = () => {
@@ -793,7 +744,6 @@
         </>;
     }
 
-    /* ── Root App — manages auth state ── */
     function App() {
         const [token,    setToken]    = useState(null);
         const [username, setUsername] = useState('');

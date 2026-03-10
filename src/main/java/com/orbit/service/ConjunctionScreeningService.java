@@ -318,8 +318,6 @@ public class ConjunctionScreeningService {
                         screeningEpoch
                 );
             } catch (CorruptTleException e) {
-                // screenPair catches CorruptTleException and returns null, so this
-                // catch is a safety net — should not normally be reached.
                 corruptSkipped++;
                 processed++;
                 continue;
