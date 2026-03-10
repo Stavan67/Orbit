@@ -1,0 +1,52 @@
+services:
+  - type: web
+    name: orbit-backend
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /actuator/health
+
+    envVars:
+      - key: DB_URL
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+
+      - key: API_ADMIN_USERNAME
+        sync: false
+      - key: API_ADMIN_PASSWORD
+        sync: false
+      - key: API_OPERATOR_USERNAME
+        sync: false
+      - key: API_OPERATOR_PASSWORD
+        sync: false
+
+      - key: JWT_SECRET
+        sync: false
+
+      - key: SPACETRACK_USERNAME
+        sync: false
+      - key: SPACETRACK_PASSWORD
+        sync: false
+
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+
+  - type: cron
+    name: orbit-conjunction-cron
+    runtime: docker
+    dockerfilePath: ./Dockerfile.cron
+    schedule: "5 2 * * *"
+    plan: free
+
+    envVars:
+      - key: BACKEND_URL
+        sync: false
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: NORAD_ID
+        value: "16181"

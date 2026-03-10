@@ -1,0 +1,30 @@
+{
+  "version": 2,
+
+  "comment": "Serves the static frontend from the /frontend directory and proxies all /api/* requests to the Render backend, so the browser never needs to know about CORS.",
+
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://orbit-backend.onrender.com/api/:path*"
+    }
+  ],
+
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ],
+
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options",         "value": "DENY" },
+        { "key": "X-XSS-Protection",        "value": "1; mode=block" }
+      ]
+    }
+  ]
+}

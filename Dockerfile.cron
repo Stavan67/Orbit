@@ -1,0 +1,8 @@
+FROM alpine:3.19
+
+RUN apk add --no-cache curl jq bash
+
+COPY cron-analyze.sh /cron-analyze.sh
+RUN chmod +x /cron-analyze.sh
+
+CMD ["/cron-analyze.sh"]

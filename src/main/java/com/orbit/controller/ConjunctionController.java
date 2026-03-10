@@ -1,7 +1,6 @@
 package com.orbit.controller;
 
 import com.orbit.entity.ConjunctionEvent;
-import com.orbit.scheduler.ConjunctionAnalysisScheduler;
 import com.orbit.service.ConjunctionAnalysisService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,17 +15,13 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Slf4j
 public class ConjunctionController {
-
     private final ConjunctionAnalysisService conjunctionAnalysisService;
-    private final ConjunctionAnalysisScheduler conjunctionAnalysisScheduler;
 
     @PostMapping("/analyze/{noradId}")
     public ResponseEntity<?> analyzeConjunctions(@PathVariable Integer noradId) {
         try {
             log.info("Manual analysis request for NORAD {}", noradId);
             List<ConjunctionEvent> events = conjunctionAnalysisService.analyzeConjunctions(noradId);
-
-            conjunctionAnalysisScheduler.recordManualRun(noradId);
 
             long criticalCount = events.stream()
                     .filter(e -> e.getRiskLevel() == ConjunctionEvent.RiskLevel.CRITICAL)
@@ -138,4 +133,5 @@ public class ConjunctionController {
                     .body(Map.of("status", "error",
                             "message", "Failed to build dashboard: " + e.getMessage()));
         }
-    }}
+    }
+}
