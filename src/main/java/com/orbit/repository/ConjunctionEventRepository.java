@@ -56,8 +56,8 @@ public interface ConjunctionEventRepository extends JpaRepository<ConjunctionEve
             @Param("now") LocalDateTime now
     );
 
-    @Query("SELECT MAX(e.createdAt) FROM ConjunctionEvent e WHERE e.primarySatellite.noradId = :noradId")
-    Optional<LocalDateTime> findLastAnalysisTimeByPrimaryNoradId(@Param("noradId") Integer noradId);
+    @Query("SELECT MAX(e.screeningEpoch) FROM ConjunctionEvent e WHERE e.primarySatellite.noradId = :noradId")
+    Optional<LocalDateTime> findMostRecentScreeningEpoch(@Param("noradId") Integer noradId);
 
     @Modifying
     @Query("DELETE FROM ConjunctionEvent ce WHERE ce.tca < :cutoffDate")

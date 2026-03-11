@@ -451,9 +451,17 @@ public class ConjunctionAnalysisService {
         eventsByRisk.put("high", high);
         eventsByRisk.put("medium", medium);
 
-        LocalDateTime lastAnalysis = conjunctionEventRepository
-                .findLastAnalysisTimeByPrimaryNoradId(noradId)
+        LocalDateTime lastAnalysis = events.stream()
+                .map(ConjunctionEvent::getScreeningEpoch)
+                .filter(java.util.Objects::nonNull)
+                .max(java.util.Comparator.naturalOrder())
                 .orElse(null);
+
+        if (lastAnalysis == null) {
+            lastAnalysis = conjunctionEventRepository
+                    .findMostRecentScreeningEpoch(noradId)
+                    .orElse(null);
+        }
 
         Map<String, Object> response = new java.util.LinkedHashMap<>();
         response.put("primaryNorad", noradId);
